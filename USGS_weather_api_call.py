@@ -2,6 +2,7 @@ import requests
 import json
 import datetime
 import time
+from Twitter_Handler import Twitter_Handler
 
 ########################### TO DO ######################
 # Integrate with code to interact with Twitter API
@@ -13,46 +14,56 @@ import time
 # https://earthquake.usgs.gov/fdsnws/event/1/
 # https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php
 
-# variables
-oldTime = "2023-11-26T19:21:41"
-newTime = ""
-requestString = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=OLDTIME&endtime=NEWTIME&latitude=32.715736&longitude=-117.161087&maxradiuskm=17'
+class USGS_weather_api_call(object):
+    oldTime: str
+    newTime: str
+    requestString: str
+    twitter: Twitter_Handler
 
-# main loop
-while True:
-    # Get current time
-    current_time = datetime.datetime.now()
-    timeString = str(current_time)
-    timeString = timeString.replace(' ', 'T')
-    timeString = timeString[:-7]
+    def __init__(self):
+        # initialize variables
+        self.oldTime = "2023-11-26T19:21:41"
+        self.newTime = ""
+        self.requestString = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=OLDTIME&endtime=NEWTIME&latitude=32.715736&longitude=-117.161087&maxradiuskm=17'
+        self.twitter = Twitter_Handler()
 
-    #variable I want to use
-    newTime = timeString
+    def run_loop(self):
+        # main loop
+        while True:
+            # Get current time
+            current_time = datetime.datetime.now()
+            timeString = str(current_time)
+            timeString = timeString.replace(' ', 'T')
+            timeString = timeString[:-7]
 
-    #replace info in requestString
-    newRequest = requestString.replace('OLDTIME', oldTime)
-    newRequest = newRequest.replace('NEWTIME', newTime)
+            #variable I want to use
+            self.newTime = timeString
 
-    #API call
-    response = requests.get(newRequest)
-    sanDiegoEarthquakes = json.loads(response.text)
-    # print(response) #check what the response from the server is, 200 is good
+            #replace info in requestString
+            newRequest = self.requestString.replace('OLDTIME', self.oldTime)
+            newRequest = newRequest.replace('NEWTIME', self.newTime)
 
-    if (len(sanDiegoEarthquakes['features']) > 0):
-        magnitude = sanDiegoEarthquakes['features'][0]['properties']['mag']
-        place = sanDiegoEarthquakes['features'][0]['properties']['place']
-        timeofEarthquake = sanDiegoEarthquakes['features'][0]['properties']['time']
-        date = datetime.datetime.fromtimestamp(timeofEarthquake / 1e3)
+            #API call
+            response = requests.get(newRequest)
+            sanDiegoEarthquakes = json.loads(response.text)
+            # print(response) #check what the response from the server is, 200 is good
 
-        print(newRequest)
-        print(response)
-        print(str(magnitude) + " magnitude earthquake detected " + str(place) + " on " + str(date)) 
-        # THIS IS WHERE I WOULD CALL THE TWITTER FUNCTION AND PASS THE NECESSARY INFORMATION
-    else:
-        print(newRequest)
-        print(response)
-        print("No update")
+            if (len(sanDiegoEarthquakes['features']) > 0):
+                magnitude = sanDiegoEarthquakes['features'][0]['properties']['mag']
+                place = sanDiegoEarthquakes['features'][0]['properties']['place']
+                timeofEarthquake = sanDiegoEarthquakes['features'][0]['properties']['time']
+                date = datetime.datetime.fromtimestamp(timeofEarthquake / 1e3)
 
-    # update value of oldTime & sleep for 10 seconds before running again
-    oldTime = newTime
-    time.sleep(10)
+                print(newRequest)
+                print(response)
+                print(str(magnitude) + " magnitude earthquake detected " + str(place) + " on " + str(date)) 
+                # THIS IS WHERE I WOULD CALL THE TWITTER FUNCTION AND PASS THE NECESSARY INFORMATION
+                self.twitter.sendTweet(str(magnitude) + " magnitude earthquake detected " + str(place) + " on " + str(date))
+            else:
+                print(newRequest)
+                print(response)
+                print("No update")
+
+            # update value of oldTime & sleep for 10 seconds before running again
+            self.oldTime = self.newTime
+            time.sleep(10)

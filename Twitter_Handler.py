@@ -6,7 +6,6 @@ from auth import (
     bearer_token,
     access_token_secret
 )
-from Json_Parser import Json_Parser
 
 
 class Twitter_Handler(object):
